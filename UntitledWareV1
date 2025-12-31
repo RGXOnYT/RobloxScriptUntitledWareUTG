@@ -2,7 +2,7 @@
 -- UNTITLEDWARE V1 | MADE BY @RGX-275
 -- "UNTITLEDWARE IS NEVER OBFUSCATED!!!"
 -- ==========================================================
-
+-- IF YOURE READING THIS, YOURE PROLLY A SKID BUT FYI THE FLIGHT IS BROKEN (WILL DISSAPEAR WHEN ITS FIXED) AND ALSO TAGHIGHLIGHT IS ON FOREVER (oopsie)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
