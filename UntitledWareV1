@@ -1,0 +1,221 @@
+-- ==========================================================
+-- UNTITLEDWARE V1 | MADE BY @RGX-275
+-- "UNTITLEDWARE IS NEVER OBFUSCATED!!!"
+-- ==========================================================
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local HttpService = game:GetService("HttpService")
+local TeleportService = game:GetService("TeleportService")
+
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local Humanoid = Character:WaitForChild("Humanoid")
+local RootPart = Character:WaitForChild("HumanoidRootPart")
+
+local CONFIG = {
+    FlyEnabled = false,
+    FlySpeed = 75,
+    SpeedEnabled = true,
+    TargetSpeed = 42,
+    DefaultSpeed = 32,
+    InfJump = true,
+    Noclip = false,
+    HitboxESP = true,
+    TagHighlight = true,
+    AntiFling = true,
+    HitboxMulti = 15,
+    Running = true
+}
+
+-- [[ UI SETUP ]]
+local ScreenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
+ScreenGui.Name = "UntitledwareV1"
+ScreenGui.ResetOnSpawn = false
+
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.new(0, 240, 0, 0)
+MainFrame.Position = UDim2.new(0.02, 0, 0.05, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 14)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
+
+local UIStroke = Instance.new("UIStroke", MainFrame)
+UIStroke.Thickness = 3
+local UIListLayout = Instance.new("UIListLayout", MainFrame)
+UIListLayout.Padding = UDim.new(0, 6)
+UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+Instance.new("UIPadding", MainFrame).PaddingTop = UDim.new(0, 10)
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
+
+-- [[ TOOLTIP HUD ]]
+local TooltipFrame = Instance.new("Frame", ScreenGui)
+TooltipFrame.Size = UDim2.new(0, 200, 0, 70)
+TooltipFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+TooltipFrame.Visible = false
+Instance.new("UICorner", TooltipFrame)
+local TooltipLabel = Instance.new("TextLabel", TooltipFrame)
+TooltipLabel.Size = UDim2.new(1, -10, 1, -10)
+TooltipLabel.Position = UDim2.new(0, 5, 0, 5)
+TooltipLabel.BackgroundTransparency = 1
+TooltipLabel.TextColor3 = Color3.new(1, 1, 1)
+TooltipLabel.Font = Enum.Font.FredokaOne
+TooltipLabel.TextScaled = true
+TooltipLabel.TextWrapped = true
+
+local function showTooltip(btn, text)
+    TooltipLabel.Text = text
+    local btnPos = btn.AbsolutePosition
+    if btnPos.X > (Camera.ViewportSize.X / 2) then
+        TooltipFrame.Position = UDim2.new(0, btnPos.X - 210, 0, btnPos.Y)
+    else
+        TooltipFrame.Position = UDim2.new(0, btnPos.X + btn.AbsoluteSize.X + 10, 0, btnPos.Y)
+    end
+    TooltipFrame.Visible = true
+end
+
+-- [[ HEADERS ]]
+local function createHeader(txt, color)
+    local l = Instance.new("TextLabel", MainFrame)
+    l.Size = UDim2.new(0.9, 0, 0, 25); l.BackgroundTransparency = 1
+    l.Text = txt; l.TextColor3 = color; l.Font = Enum.Font.FredokaOne; l.TextScaled = true
+    return l
+end
+
+createHeader("UNTITLEDWARE IS NEVER OBFUSCATED!!!", Color3.new(1, 1, 0))
+createHeader("Untitledware V1\n(made by @RGX-275)", Color3.new(1, 1, 1))
+local Status = createHeader("Status: Loaded!", Color3.new(0, 1, 0))
+createHeader("Undetected as of the winter update.", Color3.new(0, 1, 0))
+
+-- [[ HELPERS ]]
+local function getTorso(p)
+    local c = p.Character
+    return c and (c:FindFirstChild("Torso") or c:FindFirstChild("UpperTorso") or c:FindFirstChild("HumanoidRootPart"))
+end
+
+-- [[ BUTTON LOGIC ]]
+local Buttons = {}
+local function makeBtn(text, isToggle, key, desc, callback, customColor)
+    local btn = Instance.new("TextButton", MainFrame)
+    btn.Size = UDim2.new(0.9, 0, 0, 35)
+    btn.Text = text; btn.Font = Enum.Font.FredokaOne; btn.TextColor3 = Color3.new(1, 1, 1); btn.TextScaled = true
+    btn.BackgroundColor3 = customColor or Color3.fromRGB(100, 40, 40)
+    Instance.new("UICorner", btn)
+    if isToggle then Buttons[key] = btn end
+    
+    btn.MouseEnter:Connect(function() 
+        local d = desc
+        if key == "Noclip" and math.random(1, 1000) == 1 then d = "SWOOP THRU THOSE DAMN WALLZS INTO THE BACKROOMZ WITH YA" end
+        showTooltip(btn, d) 
+    end)
+    btn.MouseLeave:Connect(function() TooltipFrame.Visible = false end)
+    btn.MouseButton1Click:Connect(function()
+        if isToggle then CONFIG[key] = not CONFIG[key]
+        elseif callback then callback(btn) end
+    end)
+    MainFrame.Size = UDim2.new(0, 240, 0, UIListLayout.AbsoluteContentSize.Y + 20)
+end
+
+-- [[ CORE SYSTEMS ]]
+local bv, bg
+local function updateFly()
+    if CONFIG.FlyEnabled and CONFIG.Running then
+        if not bv then bv = Instance.new("BodyVelocity", RootPart) end
+        if not bg then bg = Instance.new("BodyGyro", RootPart) end
+        bv.MaxForce = Vector3.new(1e6, 1e6, 1e6)
+        bg.MaxTorque = Vector3.new(1e6, 1e6, 1e6)
+        Humanoid.PlatformStand = true
+    else
+        if bv then bv:Destroy(); bv = nil end
+        if bg then bg:Destroy(); bg = nil end
+        if Humanoid then Humanoid.PlatformStand = false end
+    end
+end
+
+RunService.Heartbeat:Connect(function()
+    if not CONFIG.Running then return end
+    if CONFIG.FlyEnabled and bv and bg then
+        local dir = Vector3.zero
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir += Camera.CFrame.LookVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir -= Camera.CFrame.LookVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir -= Camera.CFrame.RightVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir += Camera.CFrame.RightVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then dir += Vector3.yAxis end
+        if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then dir -= Vector3.yAxis end
+        bv.Velocity = dir.Magnitude > 0 and dir.Unit * CONFIG.FlySpeed or Vector3.zero
+        bg.CFrame = Camera.CFrame
+    end
+end)
+
+RunService.RenderStepped:Connect(function()
+    if not CONFIG.Running then return end
+    if Humanoid then Humanoid.WalkSpeed = CONFIG.SpeedEnabled and CONFIG.TargetSpeed or CONFIG.DefaultSpeed end
+    if CONFIG.Noclip and Character then
+        for _, p in pairs(Character:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide = false end end
+    end
+end)
+
+UserInputService.JumpRequest:Connect(function()
+    if CONFIG.InfJump and CONFIG.Running and Humanoid then Humanoid:ChangeState(3) end
+end)
+
+-- [[ DYNAMIC UPDATER (0.1s UI | 0.15s ESP) ]]
+task.spawn(function()
+    while CONFIG.Running do
+        UIStroke.Color = Color3.fromHSV(tick() % 4 / 4, 0.7, 1)
+        for k, b in pairs(Buttons) do
+            b.BackgroundColor3 = CONFIG[k] and Color3.fromRGB(40, 100, 40) or Color3.fromRGB(100, 40, 40)
+            b.Text = k .. " : " .. (CONFIG[k] and "ON" or "OFF")
+        end
+        task.wait(0.1)
+    end
+end)
+
+task.spawn(function()
+    while CONFIG.Running do
+        if CONFIG.HitboxESP then
+            for _, v in pairs(Players:GetPlayers()) do
+                if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
+                    local hrp = v.Character.HumanoidRootPart
+                    local torso = getTorso(v)
+                    local dist = (RootPart.Position - hrp.Position).Magnitude
+                    local inRange = dist <= (CONFIG.HitboxMulti / 2 + 5)
+                    
+                    hrp.Size = Vector3.new(CONFIG.HitboxMulti, CONFIG.HitboxMulti, CONFIG.HitboxMulti)
+                    hrp.Transparency = 0.7; hrp.Material = Enum.Material.Neon; hrp.CanCollide = false
+                    
+                    -- Color Logic
+                    hrp.Color = inRange and Color3.new(0, 1, 0) or (torso and torso.Color or Color3.new(1,1,1))
+                    
+                    -- Highlight Logic
+                    local hl = v.Character:FindFirstChild("TagHighlight")
+                    if CONFIG.TagHighlight and inRange then
+                        if not hl then hl = Instance.new("Highlight", v.Character); hl.Name = "TagHighlight" end
+                        hl.Enabled = true; hl.FillColor = Color3.new(0, 1, 0); hl.OutlineColor = Color3.new(1, 1, 1)
+                    elseif hl then
+                        hl.Enabled = false
+                    end
+                end
+            end
+        end
+        task.wait(0.15)
+    end
+end)
+
+-- [[ INITIALIZE BUTTONS ]]
+makeBtn("Fly", true, "FlyEnabled", "Makes the character fly into the sky like an f25 bomber fighter je-", updateFly)
+makeBtn("Walkspeed Override", true, "SpeedEnabled", "Sets the walkspeed to a set value of your choise. You heard this name from forsaken right?")
+makeBtn("Inf Jump", true, "InfJump", "Become a god, can jump anywhere and make people rage.")
+makeBtn("No-clip", true, "Noclip", "Go thru walls")
+makeBtn("ESP + Hitbox Expand", true, "HitboxESP", "See ppl thru walls and tag people from like 20 studs away")
+makeBtn("TagHighlight", true, "TagHighlight", "ESP Boxes are highlighted and are green when you can tag them with hitbox expander.")
+makeBtn("Anti-Fling", true, "AntiFling", "Prevents a bug from flinging yo ahh (RECOMMENDED TO KEEP ON)")
+
+makeBtn("Discord Server", false, nil, "Join the community!", function(b) setclipboard("https://discord.gg/VTZGSXZ9Vd"); b.Text = "Copied!"; task.wait(2); b.Text = "Discord Server" end, Color3.fromRGB(88, 101, 242))
+makeBtn("Youtube Channel", false, nil, "Sub to the king!", function(b) setclipboard("https://www.youtube.com/@RGX-275"); b.Text = "Copied!"; task.wait(2); b.Text = "Youtube Channel" end, Color3.fromRGB(255, 0, 0))
+makeBtn("Unload", false, nil, "Kill script", function() CONFIG.Running = false; ScreenGui:Destroy(); if Humanoid then Humanoid.WalkSpeed = 16 end end, Color3.fromRGB(30, 30, 30))
+
+updateFly()
